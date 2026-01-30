@@ -1,10 +1,7 @@
 package msu.msuteam.mixin;
 
-import net.minecraft.core.Holder;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
@@ -13,36 +10,38 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Mixin(DefaultAttributes.class)
 public class MixinDefaultAttributes {
-    @Inject(method = "getSupplier", at = @At("RETURN"))
+    // Важно: cancellable = true позволяет нам использовать setReturnValue
+    @Inject(method = "getSupplier", at = @At("RETURN"), cancellable = true)
     private static void honor_getSupplier(EntityType<?> type, CallbackInfoReturnable<AttributeSupplier> cir) {
+        // Проверяем категорию моба
         if (type.getCategory() == MobCategory.CREATURE || type.getCategory() == MobCategory.WATER_CREATURE) {
-             AttributeSupplier supplier = cir.getReturnValue();
-             if (supplier == null) return;
+            AttributeSupplier originalSupplier = cir.getReturnValue();
+            if (originalSupplier == null) return;
 
-             if (!supplier.hasAttribute(Attributes.ATTACK_DAMAGE)) {
-                 AttributeSupplierAccessor accessor = (AttributeSupplierAccessor) supplier;
-                 Map<Holder<Attribute>, AttributeInstance> instances = accessor.getInstances();
+            // Если у моба еще нет атрибута атаки
+            if (!originalSupplier.hasAttribute(Attributes.ATTACK_DAMAGE)) {
+                
+                // 1. Создаем новый билдер атрибутов
+                AttributeSupplier.Builder newBuilder = AttributeSupplier.builder();
 
-                 // Handle potential immutable map
-                 try {
-                     // Try adding directly first
-                     AttributeInstance instance = new AttributeInstance(Attributes.ATTACK_DAMAGE, i -> {});
-                     instance.setBaseValue(1.0);
-                     instances.put(Attributes.ATTACK_DAMAGE, instance);
-                 } catch (UnsupportedOperationException e) {
-                     // Copy and replace
-                     Map<Holder<Attribute>, AttributeInstance> newMap = new HashMap<>(instances);
-                     AttributeInstance instance = new AttributeInstance(Attributes.ATTACK_DAMAGE, i -> {});
-                     instance.setBaseValue(1.0);
-                     newMap.put(Attributes.ATTACK_DAMAGE, instance);
-                     accessor.setInstances(newMap);
-                 }
-             }
+                // 2. Получаем доступ к старым атрибутам через наш аксессор
+                AttributeSupplierAccessor accessor = (AttributeSupplierAccessor) originalSupplier;
+                var existingInstances = accessor.getInstances();
+
+                // 3. Копируем все существующие атрибуты в новый билдер
+                // Мы берем сам атрибут (getAttribute) и его базовое значение (getBaseValue)
+                for (var instance : existingInstances.values()) {
+                    newBuilder.add(instance.getAttribute(), instance.getBaseValue());
+                }
+
+                // 4. Добавляем наш недостающий атрибут урона
+                newBuilder.add(Attributes.ATTACK_DAMAGE, 1.0);
+
+                // 5. Подменяем возвращаемое значение на наш новый объект
+                cir.setReturnValue(newBuilder.build());
+            }
         }
     }
 }

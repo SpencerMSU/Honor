@@ -11,9 +11,7 @@ import java.util.Map;
 
 @Mixin(AttributeSupplier.class)
 public interface AttributeSupplierAccessor {
+    // Нам нужен только геттер, чтобы прочитать текущие атрибуты и скопировать их
     @Accessor("instances")
     Map<Holder<Attribute>, AttributeInstance> getInstances();
-
-    @Accessor("instances")
-    void setInstances(Map<Holder<Attribute>, AttributeInstance> instances);
 }
