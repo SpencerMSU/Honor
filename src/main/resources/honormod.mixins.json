@@ -1,0 +1,22 @@
+{
+	"required": true,
+	"package": "msu.msuteam.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ExampleMixin",
+		"MixinMobEntity",
+		"MixinPlayerEntity",
+		"MixinVillagerEntity",
+		"MixinRaid",
+		"RaidAccessor",
+		"MerchantOfferAccessor",
+		"AttributeSupplierAccessor",
+		"MixinDefaultAttributes"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
